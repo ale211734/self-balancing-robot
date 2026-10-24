@@ -40,9 +40,14 @@ dopo l'export URDF da FreeCAD.
 
 ## Prossimi passi
 1. FATTO: `export\robot_2ruote_esp32_varD.step` importato in FreeCAD -> `export\robot_cross.FCStd`.
-2. FATTO: in CROSS 3 link (base_link, ruota_sx, ruota_dx) e 2 giunti continuous; massa totale 477 g
-   (vecchio modello Fusion: 476,5 g, masse stimate: pesare i pezzi veri). Dettagli in `guida_pipeline.tex`.
-3. Esportare l'URDF da CROSS -> sostituisce `robot_sim\robot.urdf` e `robot_sim\meshes\`.
+2. FATTO: in CROSS 3 link (base_link 394,1 g, ruota_sx/dx 41,2 g) e 2 giunti continuous; totale 476,5 g.
+   Masse e inerzie calcolate con lo script nella guida (sezione "Calcolo di masse e inerzie") dalle masse
+   per pezzo stimate in Fusion (da sostituire con i pesi veri). NON usare il pulsante "Calculate mass and
+   inertia" di CROSS: usa solo il primo pezzo di ogni link e una sola densita'.
+3. Esportare l'URDF da CROSS in `robot_description\` (OutputPath del robot): servono solo `urdf\` e
+   `meshes\`; i file ROS generati (package.xml, CMakeLists.txt, launch\, rviz\) non servono a Isaac.
+   `robot_description\` e' solo output generato (sovrascritto a ogni export); il codice Isaac Lab scritto
+   a mano va in `robot_sim\`.
 4. Scrivere da capo `robot_cfg.py` (ArticulationCfg/UrdfFileCfg) e l'ambiente RL (DirectRLEnv) usando i
    nomi di link/giunti del nuovo URDF (potrebbero differire da `giunto_ruota_sx/dx`, `base_link`,
    `ruota_sx/dx` usati prima).

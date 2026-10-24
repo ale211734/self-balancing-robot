@@ -6,3 +6,4 @@
 /fusion360-mcp-server/
 __pycache__/
 *.pyc
+*.FCBak

@@ -16,6 +16,10 @@
   breaklines=true,
   frame=single,
   backgroundcolor=\color{gray!10},
+  columns=fullflexible,
+  keepspaces=true,
+  upquote=true,
+  showstringspaces=false,
 }
 
 \title{Guida passo-passo: robot a due ruote in equilibrio\\\large Pipeline standard NVIDIA (FreeCAD $\to$ URDF $\to$ Isaac Lab $\to$ RL)}
@@ -161,13 +165,13 @@ Il robot \`e fatto di \textbf{3 link} e \textbf{2 joint}:
 \end{itemize}
 
 \begin{lstlisting}
-               [LINK] base_link  (telaio, 393 g)
+               [LINK] base_link  (telaio, 394 g)
                  /                       \
    [JOINT] giunto_ruota_sx       [JOINT] giunto_ruota_dx
         (continuous)                  (continuous)
               |                             |
       [LINK] ruota_sx               [LINK] ruota_dx
-         (42 g)                        (42 g)
+         (41 g)                        (41 g)
 \end{lstlisting}
 In generale: un link per ogni parte che si muove in modo indipendente, un joint tra ogni coppia di link
 collegati. Ogni joint ha sempre un link \emph{parent} (sopra) e un link \emph{child} (sotto).
@@ -177,25 +181,26 @@ Regola usata: tutto ci\`o che \`e avvitato al telaio (anche i motori, il cui cor
 
 \subsection{Pezzi CAD in ogni link}
 Lo STEP importato da Fusion produce 40 solidi (\texttt{robot\_2ruote\_esp32\_varD000}\ldots\texttt{039}),
-rinominati con nomi leggibili. I nomi incerti (\texttt{componente\_1}, \texttt{barra\_o\_cavo\_1},
-\ldots) sono pezzi non riconoscibili con sicurezza dal CAD.
+senza i nomi dei corpi. Le etichette in FreeCAD sono i nomi dei corpi in Fusion: lo STEP mantiene lo
+stesso ordine, e la corrispondenza \`e verificata pezzo per pezzo su dimensioni e volumi (es.
+\texttt{esp32\_pcb} $69{,}4\times25{,}4\times1{,}6$ mm, i ToF $13\times25$ mm).
 
 \begin{description}[leftmargin=*]
-  \item[\texttt{base\_link}] (36 pezzi, 0,393 kg, baricentro $x{=}1{,}3$, $y{=}0{,}6$, $z{=}59{,}0$ mm):
+  \item[\texttt{base\_link}] (36 pezzi, 394,1 g, baricentro 3,6 mm avanti e 27,8 mm sopra l'asse delle
+    ruote, cio\`e $z = 60{,}3$ mm):
     \begin{itemize}
-      \item Struttura: piastra\_superiore, piastra\_inferiore, colonnina\_ant\_sx/dx,
-        colonnina\_post\_sx/dx, vite\_o\_distanziale\_1/2, barra\_o\_cavo\_1/2.
-      \item Motori e staffe: motore\_sx, motore\_dx, staffa\_motore\_sx\_sup/inf,
-        staffa\_motore\_dx\_sup/inf.
-      \item Batteria: vano\_batteria, cella\_batteria\_1/2.
-      \item Elettronica: scheda\_esp32s3, scheda\_driver\_motori, scheda\_piccola\_1/2, componente\_1,
-        connettore\_o\_componente\_1/2.
-      \item Camera: staffa\_camera\_1\ldots5.
-      \item Appoggi: supporto\_anteriore\_centro/sx/dx, piede\_anteriore, piede\_posteriore.
+      \item Struttura: piastra\_alta, piastra\_bassa, colonnina\_1\ldots4, portabatterie,
+        appoggio\_anteriore, appoggio\_posteriore.
+      \item Motori e staffe: motore\_sx, motore\_dx, staffa\_alta\_sx/dx, staffa\_base\_sx/dx.
+      \item Batteria: cella\_18650\_1/2.
+      \item Elettronica: driver\_TB6612, step\_down\_5V, IMU\_MPU6050, esp32\_pcb, esp32\_modulo\_WROOM,
+        esp32\_usb\_1/2, esp32\_header\_sx/dx, esp32\_supporto\_1/2.
+      \item Sensori di distanza: ToF\_centro, ToF\_sx, ToF\_dx.
+      \item Camera: cam\_supporto, cam\_pcb, cam\_modulo\_WROOM, cam\_obiettivo\_base, cam\_obiettivo.
     \end{itemize}
-  \item[\texttt{ruota\_sx}] (0,042 kg, centro $y{=}{+}88$, $z{=}32{,}5$ mm): ruota\_sx\_corpo,
-    ruota\_sx\_gomma.
-  \item[\texttt{ruota\_dx}] (0,042 kg, centro $y{=}{-}88$, $z{=}32{,}5$ mm): ruota\_dx\_corpo,
+  \item[\texttt{ruota\_sx}] (41,2 g, centro $y{=}{+}88$, $z{=}32{,}5$ mm): ruota\_sx\_corpo (cerchio
+    stampato), ruota\_sx\_gomma (camera d'aria).
+  \item[\texttt{ruota\_dx}] (41,2 g, centro $y{=}{-}88$, $z{=}32{,}5$ mm): ruota\_dx\_corpo,
     ruota\_dx\_gomma.
 \end{description}
 
@@ -225,8 +230,8 @@ coppia di stallo 0,30 N$\cdot$m e 280 giri/min a vuoto ($280 \cdot 2\pi/60 = 29{
   \item Stessa cosa per \texttt{ruota\_sx} e \texttt{ruota\_dx}.
   \item \emph{New Joint} (\texttt{N},\texttt{J}): nel pannello Dati Type, Parent, Child, Origin,
     Effort, Velocity come in tabella. Usare \emph{Set placement} per posizionare le mesh.
-  \item \emph{Set the material to the whole robot or a link}, poi \emph{Calculate mass and inertia}
-    con il robot selezionato: riempie Mass e Ixx\ldots Izz di ogni link.
+  \item Massa e inerzia di ogni link: con lo script della sezione \ref{sec:masse} nella console Python di
+    FreeCAD (non con il pulsante \emph{Calculate mass and inertia}, vedi l\`i perch\'e).
 \end{enumerate}
 
 \subsection{Problemi incontrati}
@@ -241,19 +246,240 @@ coppia di stallo 0,30 N$\cdot$m e 280 giri/min a vuoto ($280 \cdot 2\pi/60 = 29{
   \item \textbf{Colori} per riconoscere i link: grigio \texttt{base\_link}, rosso \texttt{ruota\_sx}, blu
     \texttt{ruota\_dx}. Le frecce blu al centro delle ruote sono gli assi dei giunti
     (\texttt{ShowAxis}, lunghezza 60 mm).
-  \item \textbf{Materiale non assegnato}: \texttt{MaterialDensity} \`e vuoto e
-    \texttt{MaterialNotCalculate = True}, quindi la densit\`a usata non \`e documentata. Le masse per\`o
-    tornano con il vecchio modello Fusion: totale $393 + 42 + 42 = 477$ g contro 476,5 g (stime: motori
-    70 g, celle 46 g, plastica stampata 0,6 g/cm$^3$; \textbf{da verificare pesando i pezzi veri}).
+  \item \textbf{Nomi dei pezzi sbagliati}: nella prima sessione i 40 solidi erano stati rinominati a
+    intuito (es.\ i 3 sensori ToF chiamati \texttt{supporto\_anteriore\_*}, driver/step-down/IMU chiamati
+    \texttt{scheda\_piccola\_*} e \texttt{componente\_1}). Rinominati con i nomi dei corpi Fusion.
+  \item \textbf{Masse di origine non documentata}: masse e inerzie erano state calcolate con densit\`a
+    non scritte da nessuna parte (393 g + 2$\times$42 g). Ricalcolate con lo script della sezione
+    \ref{sec:masse} dalle masse per pezzo stimate in Fusion: ora coincidono con i valori di Fusion.
+  \item \textbf{Baricentro e inerzia delle ruote sbagliati nell'URDF}: il primo export dava per
+    \texttt{ruota\_sx/dx} il baricentro a $(0;\pm0{,}088;0{,}0325)$ m \emph{rispetto alla ruota} (cio\`e
+    in coordinate assolute) e l'inerzia maggiore su \texttt{iyy}, mentre nel sistema del link ruota
+    l'asse di rotazione \`e $z$. Lo script della sezione \ref{sec:masse} esprime baricentro e inerzia nel
+    sistema di ogni link.
+  \item \textbf{Export: la finestra ``ROS workspace''}: all'avvio di \emph{Export to URDF} CROSS chiede
+    il workspace ROS (non la cartella di uscita!) e avvisa ``\ldots does not appear to be a valid ROS
+    workspace''. \`E innocuo: controlla solo \texttt{install/setup.bash} di ROS~2 su Linux. Scegliere
+    \texttt{G:\textbackslash robotTest}. La cartella di uscita \`e solo l'\textbf{OutputPath} del robot.
+  \item \textbf{Export che non scrive nulla}: se i file esistono gi\`a, nella finestra di conferma vanno
+    messi tutti su \textbf{Overwrite}; con \emph{Ignore} CROSS non scrive niente (e non accetta una
+    scrittura parziale). Finch\'e quella finestra resta aperta, FreeCAD (e il bridge MCP) \`e bloccato.
   \item \textbf{Bridge MCP che non parte da solo}: all'avvio compare
     ``\texttt{module 'FreeCAD' has no attribute 'GuiUp'}'' e l'auto-start fallisce; avviarlo dal
     workbench \emph{Robust MCP Bridge} con \emph{Start MCP Bridge}.
 \end{itemize}
 
+\section{Calcolo di masse e inerzie}\label{sec:masse}
+\subsection{Perch\'e non il pulsante di CROSS}
+\emph{Calculate mass and inertia} di CROSS (verificato nel codice) usa \textbf{solo il primo pezzo} della
+lista Real di ogni link e \textbf{una sola densit\`a per link}, e lascia l'inerzia negli assi del CAD. Per
+\texttt{base\_link} (36 pezzi di materiali diversi) e per le ruote (cerchio + gomma) il risultato sarebbe
+sbagliato. Per questo i link hanno \texttt{MaterialNotCalculate = True}: il pulsante li salta.
+
+\subsection{Masse dei pezzi}
+Il dato di partenza \`e la massa di ogni pezzo. Per ora sono stime fatte in Fusion; \textbf{quando ci sono i
+pezzi veri si pesano e si correggono questi numeri}.
+\begin{center}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrl}
+  \hline
+  Pezzo & Massa (g) & Origine della stima \\
+  \hline
+  piastra\_alta, piastra\_bassa & 32,60; 32,63 & volume $\times$ 0,6 g/cm$^3$ (PLA stampato) \\
+  colonnina\_1\ldots4 & 0,74 cad. & volume $\times$ 0,6 g/cm$^3$ \\
+  staffa\_alta/base\_sx/dx & 7,39 cad. & volume $\times$ 0,6 g/cm$^3$ \\
+  portabatterie & 9,34 & volume $\times$ 0,6 g/cm$^3$ \\
+  appoggio\_anteriore / posteriore & 1,27; 0,97 & volume $\times$ 0,6 g/cm$^3$ \\
+  motore\_sx, motore\_dx & 70 cad. & motore equivalente JGA25-370 (\textbf{da pesare}) \\
+  cella\_18650\_1/2 & 46 cad. & datasheet (dato reale) \\
+  driver\_TB6612 / step\_down\_5V / IMU\_MPU6050 & 5 / 10 / 3 & stima \\
+  ToF\_centro/sx/dx & 3 cad. & stima \\
+  esp32\_pcb / esp32\_modulo\_WROOM & 8 / 3 & stima \\
+  esp32\_usb\_1/2, esp32\_header\_sx/dx & 0,5 / 1 cad. & stima \\
+  esp32\_supporto\_1/2 & 0,13 cad. & volume $\times$ 0,6 g/cm$^3$ \\
+  cam\_supporto / cam\_pcb / cam\_modulo\_WROOM & 0,54 / 5 / 3 & stima \\
+  cam\_obiettivo\_base / cam\_obiettivo & 1 / 2 & stima \\
+  ruota\_sx/dx\_corpo & 37,06 cad. & volume $\times$ 0,6 g/cm$^3$ \\
+  ruota\_sx/dx\_gomma & 4,11 cad. & volume $\times$ 0,95 g/cm$^3$ (gomma) \\
+  \hline
+  \textbf{Totale robot} & \textbf{476,5} & base\_link 394,1 + 2 ruote $\times$ 41,2 \\
+  \hline
+\end{tabular}}
+\end{center}
+
+\subsection{Lo script}
+In FreeCAD: \emph{Visualizza} $\to$ \emph{Pannelli} $\to$ \emph{Console Python}, incollare lo script e
+premere Invio. Per ogni link: somma le masse dei pezzi, calcola il baricentro, somma le inerzie di ogni
+pezzo (dalla sua forma, a densit\`a uniforme) portandole sul baricentro comune (teorema di
+Huygens-Steiner), poi riporta baricentro e inerzia nel sistema del link (per le ruote: quello del giunto).
+Infine scrive \texttt{Mass}, \texttt{CenterOfMass}, \texttt{Ixx}\ldots\texttt{Izz} nei link. Dopo, salvare e
+rifare l'export URDF.
+\begin{lstlisting}[language=Python,basicstyle=\ttfamily\scriptsize]
+import FreeCAD
+
+# Massa di ogni pezzo in grammi (stime da Fusion 360: da sostituire con i pesi veri).
+MASSE_G = {
+    "piastra_alta": 32.60, "piastra_bassa": 32.63,
+    "colonnina_1": 0.74, "colonnina_2": 0.74, "colonnina_3": 0.74, "colonnina_4": 0.74,
+    "staffa_alta_sx": 7.39, "staffa_base_sx": 7.39, "staffa_alta_dx": 7.39, "staffa_base_dx": 7.39,
+    "portabatterie": 9.34, "appoggio_anteriore": 1.27, "appoggio_posteriore": 0.97,
+    "motore_sx": 70.0, "motore_dx": 70.0,
+    "cella_18650_1": 46.0, "cella_18650_2": 46.0,
+    "driver_TB6612": 5.0, "step_down_5V": 10.0, "IMU_MPU6050": 3.0,
+    "ToF_centro": 3.0, "ToF_sx": 3.0, "ToF_dx": 3.0,
+    "esp32_supporto_1": 0.13, "esp32_supporto_2": 0.13, "esp32_pcb": 8.0, "esp32_modulo_WROOM": 3.0,
+    "esp32_usb_1": 0.5, "esp32_usb_2": 0.5, "esp32_header_sx": 1.0, "esp32_header_dx": 1.0,
+    "cam_supporto": 0.54, "cam_pcb": 5.0, "cam_modulo_WROOM": 3.0,
+    "cam_obiettivo_base": 1.0, "cam_obiettivo": 2.0,
+    "ruota_sx_corpo": 37.06, "ruota_dx_corpo": 37.06,
+    "ruota_sx_gomma": 4.11, "ruota_dx_gomma": 4.11,
+}
+
+doc = FreeCAD.ActiveDocument
+robot = [o for o in doc.Objects if getattr(o, "_Type", "") == "Cross::Robot"][0]
+links = [o for o in robot.Group if getattr(o, "_Type", "") == "Cross::Link"]
+joints = [o for o in robot.Group if getattr(o, "_Type", "") == "Cross::Joint"]
+
+for link in links:
+    # Sistema del link: origine del giunto di cui e' figlio (base_link: origine del robot).
+    frame = FreeCAD.Placement()
+    for j in joints:
+        if j.Child == link.Name:
+            frame = j.Origin
+
+    m_tot, com = 0.0, FreeCAD.Vector()
+    for p in link.Real:
+        m = MASSE_G[p.Label] / 1000.0
+        m_tot += m
+        com += p.Shape.CenterOfMass * m
+    com = com * (1.0 / m_tot)
+
+    # Tensore d'inerzia attorno al baricentro del link, assi del CAD (kg*m^2).
+    I = [[0.0] * 3 for _ in range(3)]
+    for p in link.Real:
+        m = MASSE_G[p.Label] / 1000.0
+        k = m / p.Shape.Volume * 1e-6
+        M = p.Shape.MatrixOfInertia
+        Ip = [[M.A11, M.A12, M.A13], [M.A21, M.A22, M.A23], [M.A31, M.A32, M.A33]]
+        r = (p.Shape.CenterOfMass - com) * 1e-3
+        rv, r2 = [r.x, r.y, r.z], r.x**2 + r.y**2 + r.z**2
+        for a in range(3):
+            for b in range(3):
+                I[a][b] += Ip[a][b] * k + m * ((r2 if a == b else 0.0) - rv[a] * rv[b])
+
+    # Riporta baricentro e inerzia nel sistema del link.
+    R = frame.Rotation.toMatrix()
+    Rm = [[R.A11, R.A12, R.A13], [R.A21, R.A22, R.A23], [R.A31, R.A32, R.A33]]
+    IL = [[sum(Rm[a][i] * I[a][b] * Rm[b][j] for a in range(3) for b in range(3))
+           for j in range(3)] for i in range(3)]
+
+    link.MaterialNotCalculate = True
+    link.Mass = m_tot
+    link.CenterOfMass = FreeCAD.Placement(frame.inverse().multVec(com), FreeCAD.Rotation())
+    link.Ixx, link.Iyy, link.Izz = IL[0][0], IL[1][1], IL[2][2]
+    link.Ixy, link.Ixz, link.Iyz = IL[0][1], IL[0][2], IL[1][2]
+    print("%-10s massa %.1f g  baricentro %s mm  Ixx %.3e Iyy %.3e Izz %.3e"
+          % (link.Label, m_tot * 1000, link.CenterOfMass.Base, link.Ixx, link.Iyy, link.Izz))
+
+doc.recompute()
+\end{lstlisting}
+
+Risultato (uguale ai valori calcolati da Fusion 360 sul modello originale):
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+base_link  massa 394.1 g  baricentro (3.6, -0.02, 60.3) mm  Ixx 9.033e-04 Iyy 5.547e-04 Izz 8.051e-04
+ruota_sx   massa 41.2 g   baricentro (0, 0, 0) mm          Ixx 1.265e-05 Iyy 1.265e-05 Izz 2.257e-05
+ruota_dx   massa 41.2 g   baricentro (0, 0, 0) mm          Ixx 1.265e-05 Iyy 1.265e-05 Izz 2.257e-05
+\end{lstlisting}
+Nota: lo script assume che il padre di ogni giunto sia \texttt{base\_link} con posizione zero (vero per
+questo robot); con catene pi\`u lunghe andrebbero composte le posizioni dei giunti.
+
+\section{Il formato URDF}
+\textbf{URDF} (\emph{Unified Robot Description Format}) \`e un file di testo in formato XML che descrive
+un robot come albero di \textbf{link} collegati da \textbf{joint}. Nato in ROS, \`e letto da quasi tutti
+i simulatori, tra cui Isaac Sim. Il nostro \`e \texttt{robot\_description\textbackslash urdf\textbackslash robot.urdf}.
+
+\textbf{Unit\`a di misura}: sempre SI. Lunghezze in metri, angoli in radianti, masse in kg, inerzie in
+kg$\cdot$m$^2$ (CROSS converte dai millimetri di FreeCAD).
+
+\subsection{Struttura del file}
+\begin{lstlisting}
+<robot name="robot">
+  <link name="base_link"> ... </link>
+  <link name="ruota_sx">  ... </link>
+  <link name="ruota_dx">  ... </link>
+  <joint name="giunto_ruota_sx" type="continuous"> ... </joint>
+  <joint name="giunto_ruota_dx" type="continuous"> ... </joint>
+</robot>
+\end{lstlisting}
+
+\subsection{Un link}
+Ogni \texttt{<link>} ha tre parti (esempio reale, \texttt{ruota\_sx}, accorciato):
+\begin{lstlisting}
+<link name="ruota_sx">
+  <visual>       <!-- come si VEDE: una per ogni pezzo CAD -->
+    <origin rpy="1.5708 0 0" xyz="0 0.0325 -0.088"/>
+    <geometry>
+      <mesh filename="package://robot_description/meshes/robot_cross_ruota_sx_gomma.dae"/>
+    </geometry>
+  </visual>
+  <collision>    <!-- forma usata per i CONTATTI (qui uguale alla visual) -->
+    ...
+  </collision>
+  <inertial>     <!-- come si MUOVE: massa, baricentro, inerzia -->
+    <mass value="0.0418"/>
+    <origin xyz="0 0 0"/>
+    <inertia ixx="1.30e-05" iyy="1.30e-05" izz="2.32e-05" ixy="0" ixz="0" iyz="0"/>
+  </inertial>
+</link>
+\end{lstlisting}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{<visual>}: solo grafica, non influisce sulla fisica.
+  \item \texttt{<collision>}: la forma che tocca il pavimento e gli ostacoli. Pu\`o essere la mesh vera o una
+    forma semplice (cilindro, scatola), pi\`u veloce da simulare.
+  \item \texttt{<inertial>}: massa, posizione del baricentro (\texttt{origin}, nel sistema del link) e
+    tensore d'inerzia attorno al baricentro. \`E ci\`o che conta per la dinamica.
+  \item \texttt{<origin xyz rpy>}: spostamento (m) e rotazione (roll, pitch, yaw in radianti) rispetto al
+    sistema di riferimento del link.
+  \item \texttt{package://robot\_description/\ldots}: percorso della mesh secondo la convenzione ROS
+    (nome del pacchetto = nome della cartella).
+\end{itemize}
+
+\subsection{Un joint}
+\begin{lstlisting}
+<joint name="giunto_ruota_sx" type="continuous">
+  <parent link="base_link"/>
+  <child  link="ruota_sx"/>
+  <origin rpy="-1.5708 0 0" xyz="0 0.088 0.0325"/>
+  <axis xyz="0 0 1"/>
+</joint>
+\end{lstlisting}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{parent} / \texttt{child}: i due link collegati.
+  \item \texttt{origin}: dove sta il perno, nel sistema del parent. Qui al centro della ruota sinistra
+    (y = 88 mm, z = 32,5 mm), ruotato di $-90^\circ$ attorno a $x$.
+  \item \texttt{axis}: asse di rotazione nel sistema del joint. $z$ dopo la rotazione di $-90^\circ$
+    coincide con l'asse della ruota.
+  \item \texttt{<limit effort velocity>}: coppia e velocit\`a massime. Per i giunti \texttt{continuous}
+    sono facoltativi e CROSS non li scrive; in Isaac Lab si impostano negli attuatori
+    dell'\texttt{ArticulationCfg}.
+\end{itemize}
+
+\textbf{Sistemi di riferimento}: il link radice (\texttt{base\_link}) definisce il sistema del robot;
+ogni joint posiziona il sistema del link figlio rispetto al padre. Per questo baricentro e mesh delle ruote
+sono espressi rispetto al centro della ruota, non rispetto all'origine del robot (vedi il problema
+del baricentro delle ruote).
+
 \section{Prossimi passi (da fare)}
 \begin{enumerate}[leftmargin=*]
   \item Quando ci sono i pezzi veri: pesarli, correggere le masse e ricalcolare massa e inerzia.
-  \item Esportare l'URDF da CROSS in \texttt{robot\_sim\textbackslash} (corpo attualmente vuota).
+  \item FATTO (24/10/2026): esportare l'URDF da CROSS: selezionare \texttt{robot} e premere \emph{Export to URDF},
+    confermando la scrittura di tutti i file. La destinazione \`e la propriet\`a \textbf{OutputPath} del
+    robot, impostata a \texttt{G:/robotTest/robot\_description}: una cartella dedicata solo all'output
+    generato (sovrascritta a ogni export), separata da \texttt{robot\_sim\textbackslash} dove andr\`a il
+    codice Isaac Lab scritto a mano. Il nome segue la convenzione ROS \texttt{<nome>\_description}; nell'URDF
+    le mesh diventano \texttt{package://robot\_description/meshes/\ldots}. Servono solo \texttt{urdf\textbackslash}
+    e \texttt{meshes\textbackslash}; \texttt{package.xml}, \texttt{CMakeLists.txt}, \texttt{launch\textbackslash},
+    \texttt{rviz\textbackslash} sono file ROS non usati da Isaac.
   \item Scrivere da capo \texttt{robot\_cfg.py} (ArticulationCfg/UrdfFileCfg) e l'ambiente RL
     (DirectRLEnv) usando i nomi di link/giunti del nuovo URDF.
   \item Scrivere da capo gli script di training/visualizzazione/valutazione e confrontare i risultati con
