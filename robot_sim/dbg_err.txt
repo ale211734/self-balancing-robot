@@ -1,5 +1,0 @@
-AppLauncher is deprecated; use isaaclab.app.launch_simulation.
-Warning: Possible version incompatibility. Attempting to load carb::ujitso::IFactory with version v0.3 against v0.2.
-[ISAACLAB] KitLauncher initialization complete
-G:\robotTest\robot_sim\debug_effort.py:42: DeprecationWarning: Articulation.set_joint_effort_target is deprecated. Use articulation.actuators.target_command.set_effort_index instead.
-  robot.set_joint_effort_target(torch.full((2, 2), tau_k, device=sim.device))

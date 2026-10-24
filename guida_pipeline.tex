@@ -1,0 +1,264 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[italian]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\let\oldunderscore\_
+\renewcommand{\_}{\oldunderscore\allowbreak}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!10},
+}
+
+\title{Guida passo-passo: robot a due ruote in equilibrio\\\large Pipeline standard NVIDIA (FreeCAD $\to$ URDF $\to$ Isaac Lab $\to$ RL)}
+\author{Progetto robot\_slalom}
+\date{Aggiornata al 24 ottobre 2026}
+
+\begin{document}
+\maketitle
+\sloppy
+
+\section*{Scopo di questa guida}
+Documenta, passo per passo e in ordine cronologico, la pipeline standard NVIDIA/Isaac Lab usata in questo
+progetto: dal modello CAD fino all'addestramento con reinforcement learning. Viene aggiornata ad ogni
+passo compiuto. La regola generale della pipeline (cosa \`e "standard" e cosa no) \`e in
+\texttt{PIPELINE\_STANDARD\_NVIDIA.md}.
+
+\tableofcontents
+
+\section{Punto di partenza: dal CAD Fusion a FreeCAD}
+Il modello del robot a due ruote \`e stato progettato in \textbf{Fusion 360} (CAD): corpo, motori, ruote,
+batteria, elettronica (ESP32-S3, sensori ToF, camera). Da qui si parte seguendo alla lettera la pipeline
+standard NVIDIA, usando \textbf{FreeCAD} al posto di Fusion 360 per il passaggio successivo, perch\'e ha un
+esportatore URDF nativo tramite il workbench \textbf{CROSS}:
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Importazione}: il modello viene esportato da Fusion in formato neutro (\texttt{STEP},
+    file \texttt{export\textbackslash robot\_2ruote\_esp32\_varD.step}) e importato in FreeCAD.
+  \item \textbf{CROSS}: dentro FreeCAD si definiscono i link e i giunti del robot (corpo, ruota sx, ruota
+    dx, giunti rivoluti attorno all'asse delle ruote) e si assegnano materiali/densit\`a ai pezzi.
+  \item \textbf{Esportazione}: CROSS esporta direttamente \texttt{robot.urdf}, con masse, inerzie e mesh
+    incluse.
+  \item \textbf{Simulazione}: Isaac Sim importa l'URDF (\texttt{sim\_utils.UrdfFileCfg}) e lo converte in
+    USD.
+  \item \textbf{Isaac Lab}: \texttt{ArticulationCfg} carica il robot, \texttt{DirectRLEnv} definisce
+    l'ambiente RL, \texttt{rsl\_rl} esegue l'addestramento PPO.
+\end{enumerate}
+
+Tutto il codice Python di supporto (configurazione del robot, ambiente RL, script di training,
+visualizzazione e valutazione) verr\`a scritto da zero a partire dal nuovo URDF, seguendo solo l'API
+standard di Isaac Lab, senza bridge o file intermedi scritti a mano.
+
+\section{Installazione FreeCAD e del server MCP}
+\textbf{Data: 24 ottobre 2026.}
+
+\begin{enumerate}[leftmargin=*]
+  \item FreeCAD 1.1 installato in \texttt{C:\textbackslash Program Files\textbackslash FreeCAD 1.1}.
+  \item Server MCP \texttt{freecad-robust-mcp} (progetto \href{https://github.com/spkane/freecad-addon-robust-mcp-server}{spkane/freecad-addon-robust-mcp-server})
+    installato con pip (Python 3.11, richiesto per compatibilit\`a ABI con FreeCAD):
+\begin{lstlisting}[language=bash]
+python -m pip install --user freecad-robust-mcp
+\end{lstlisting}
+  \item Registrato in Claude Code:
+\begin{lstlisting}[language=bash]
+claude mcp add freecad "C:\Users\aless\AppData\Roaming\Python\Python311\Scripts\freecad-mcp.exe" -e FREECAD_MODE=xmlrpc
+\end{lstlisting}
+  \item Il server richiede la libreria \texttt{mcp} versione 1.x (con la 2.x si chiude all'avvio):
+\begin{lstlisting}[language=bash]
+python -m pip install --user "mcp<2"
+\end{lstlisting}
+  \item \textbf{Workbench dentro FreeCAD}: \emph{Robust MCP Bridge} non \`e nel catalogo dell'Addon
+    Manager, quindi va installato a mano. Dal repository si copia la cartella
+    \texttt{freecad\textbackslash RobustMCPBridge} in
+\begin{lstlisting}
+%APPDATA%\FreeCAD\v1-1\Mod\RobustMCPBridge\freecad\RobustMCPBridge\
+\end{lstlisting}
+    e si mette un \texttt{package.xml} in \texttt{...\textbackslash Mod\textbackslash RobustMCPBridge\textbackslash}.
+    Attenzione: FreeCAD 1.1 legge gli addon dalla cartella con la versione (\texttt{v1-1\textbackslash Mod}),
+    non da \texttt{FreeCAD\textbackslash Mod}.
+  \item Il Python interno di FreeCAD deve avere le dipendenze del bridge (mancava \texttt{anyio}):
+\begin{lstlisting}[language=bash]
+"C:\Program Files\FreeCAD 1.1\bin\python.exe" -m pip install --user freecad-robust-mcp
+\end{lstlisting}
+  \item Avvio: in FreeCAD selezionare il workbench \emph{Robust MCP Bridge} e cliccare
+    \emph{Start MCP Bridge}. Nel Report view compare ``MCP Bridge started!'' (XML-RPC 9875, socket 9876)
+    e \texttt{claude mcp list} mostra \texttt{freecad: Connected}.
+  \item Avvio automatico del bridge a ogni apertura di FreeCAD: in \texttt{\%APPDATA\%\textbackslash FreeCAD\textbackslash v1-1\textbackslash user.cfg},
+    nel gruppo \texttt{RobustMCPBridge}, aggiungere \texttt{<FCBool Name="AutoStart" Value="1"/>}
+    (con FreeCAD chiuso, altrimenti viene sovrascritto).
+\end{enumerate}
+
+\section{Installazione del workbench CROSS (export URDF)}
+CROSS non \`e nel catalogo standard dell'Addon Manager (cercando ``cross'' escono solo \emph{Cross Section}
+e \emph{Mouse Cross}). Si installa a mano dal repository \texttt{github.com/galou/freecad.cross}:
+\begin{enumerate}[leftmargin=*]
+  \item Clonare il repository nella cartella Mod, \textbf{con il nome esatto} \texttt{freecad.cross}
+    (il codice cerca icone, template e finestre in \texttt{Mod\textbackslash freecad.cross\textbackslash resources}:
+    con un altro nome il workbench si carica ma i template dell'export non vengono trovati):
+\begin{lstlisting}[language=bash]
+cd %APPDATA%\FreeCAD\v1-1\Mod
+git clone --depth 1 https://github.com/galou/freecad.cross.git freecad.cross
+\end{lstlisting}
+  \item Creare \texttt{Mod\textbackslash freecad.cross\textbackslash InitGui.py} con una sola riga
+    (l'Addon Manager lo farebbe da s\'e; col clone manuale va scritto):
+\begin{lstlisting}[language=Python]
+import freecad.cross.init_gui
+\end{lstlisting}
+  \item Installare le dipendenze dichiarate in \texttt{package.xml} nel Python di FreeCAD:
+\begin{lstlisting}[language=bash]
+"C:\Program Files\FreeCAD 1.1\bin\python.exe" -m pip install --user urdf-parser-py xacro
+\end{lstlisting}
+  \item Riavviare FreeCAD. Nell'elenco dei workbench compare \emph{CROSS - ROS workbench} con i comandi
+    NewRobot, NewLink, NewJoint, SetMaterial, CalculateMassAndInertia, UrdfExport.
+    L'avviso ``\texttt{ROS\_DISTRO} is not set'' \`e normale: ROS non serve per esportare l'URDF.
+\end{enumerate}
+
+\section{I concetti: Robot, Link, Joint}
+Un robot per la simulazione (formato URDF) si descrive con tre soli mattoni, che in CROSS corrispondono
+ai pulsanti \emph{New Robot}, \emph{New Link}, \emph{New Joint}:
+
+\begin{description}[leftmargin=*]
+  \item[Link = un pezzo rigido.] Un insieme di pezzi CAD che si muovono sempre insieme, come se fossero
+    incollati. Per il simulatore \`e un unico oggetto con massa, baricentro e inerzia. Il link non ha una
+    forma propria: \`e un'``etichetta'' che raggruppa pezzi CAD (per questo nell'albero di FreeCAD,
+    passandoci sopra col mouse, non si evidenzia niente).
+  \item[Joint = il collegamento tra due link.] Dice come un link si muove rispetto all'altro:
+    \begin{itemize}
+      \item \textbf{Parent}: il pezzo ``fisso''; \textbf{Child}: il pezzo che si muove.
+      \item \textbf{Type}: \texttt{continuous} (gira all'infinito, come una ruota), \texttt{revolute}
+        (gira entro dei limiti, come un gomito), \texttt{prismatic} (scorre, come un cassetto),
+        \texttt{fixed} (bloccato).
+      \item \textbf{Origin}: posizione del perno e direzione dell'asse di rotazione.
+      \item \textbf{Effort / Velocity}: coppia (N$\cdot$m) e velocit\`a (rad/s) massime del motore.
+    \end{itemize}
+  \item[Robot = il contenitore] che tiene insieme link e giunti; \`e ci\`o che si esporta come
+    \texttt{robot.urdf}.
+\end{description}
+
+In Isaac Lab la rete neurale comander\`a i \textbf{giunti} (quanta coppia dare a ogni ruota); il
+simulatore calcola come si muove il resto in base alle masse dei \textbf{link}.
+
+\section{Composizione del robot in CROSS}
+\textbf{Data: 24 ottobre 2026.} File: \texttt{export\textbackslash robot\_cross.FCStd}
+(recuperato dall'autosalvataggio di FreeCAD dopo uno spegnimento del PC, poi salvato con questo nome).
+
+\subsection{Struttura}
+Il robot \`e fatto di \textbf{3 link} e \textbf{2 joint}:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Link} (pezzi rigidi): \texttt{base\_link} (il telaio), \texttt{ruota\_sx} (ruota
+    sinistra), \texttt{ruota\_dx} (ruota destra). \textbf{Anche ogni ruota \`e un link}: \`e un pezzo
+    rigido a s\'e, separato dal telaio, perch\'e si muove (gira) rispetto ad esso.
+  \item \textbf{Joint} (collegamenti): \texttt{giunto\_ruota\_sx} collega il telaio alla ruota sinistra,
+    \texttt{giunto\_ruota\_dx} collega il telaio alla ruota destra.
+\end{itemize}
+
+\begin{lstlisting}
+               [LINK] base_link  (telaio, 393 g)
+                 /                       \
+   [JOINT] giunto_ruota_sx       [JOINT] giunto_ruota_dx
+        (continuous)                  (continuous)
+              |                             |
+      [LINK] ruota_sx               [LINK] ruota_dx
+         (42 g)                        (42 g)
+\end{lstlisting}
+In generale: un link per ogni parte che si muove in modo indipendente, un joint tra ogni coppia di link
+collegati. Ogni joint ha sempre un link \emph{parent} (sopra) e un link \emph{child} (sotto).
+
+Regola usata: tutto ci\`o che \`e avvitato al telaio (anche i motori, il cui corpo non gira) va in
+\texttt{base\_link}; solo ci\`o che ruota con l'albero del motore va nel link della ruota.
+
+\subsection{Pezzi CAD in ogni link}
+Lo STEP importato da Fusion produce 40 solidi (\texttt{robot\_2ruote\_esp32\_varD000}\ldots\texttt{039}),
+rinominati con nomi leggibili. I nomi incerti (\texttt{componente\_1}, \texttt{barra\_o\_cavo\_1},
+\ldots) sono pezzi non riconoscibili con sicurezza dal CAD.
+
+\begin{description}[leftmargin=*]
+  \item[\texttt{base\_link}] (36 pezzi, 0,393 kg, baricentro $x{=}1{,}3$, $y{=}0{,}6$, $z{=}59{,}0$ mm):
+    \begin{itemize}
+      \item Struttura: piastra\_superiore, piastra\_inferiore, colonnina\_ant\_sx/dx,
+        colonnina\_post\_sx/dx, vite\_o\_distanziale\_1/2, barra\_o\_cavo\_1/2.
+      \item Motori e staffe: motore\_sx, motore\_dx, staffa\_motore\_sx\_sup/inf,
+        staffa\_motore\_dx\_sup/inf.
+      \item Batteria: vano\_batteria, cella\_batteria\_1/2.
+      \item Elettronica: scheda\_esp32s3, scheda\_driver\_motori, scheda\_piccola\_1/2, componente\_1,
+        connettore\_o\_componente\_1/2.
+      \item Camera: staffa\_camera\_1\ldots5.
+      \item Appoggi: supporto\_anteriore\_centro/sx/dx, piede\_anteriore, piede\_posteriore.
+    \end{itemize}
+  \item[\texttt{ruota\_sx}] (0,042 kg, centro $y{=}{+}88$, $z{=}32{,}5$ mm): ruota\_sx\_corpo,
+    ruota\_sx\_gomma.
+  \item[\texttt{ruota\_dx}] (0,042 kg, centro $y{=}{-}88$, $z{=}32{,}5$ mm): ruota\_dx\_corpo,
+    ruota\_dx\_gomma.
+\end{description}
+
+\subsection{Giunti}
+\begin{center}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllll}
+  \hline
+  Giunto & Tipo & Parent $\to$ Child & Origin (mm, rotazione) & Effort / Velocity \\
+  \hline
+  \texttt{giunto\_ruota\_sx} & continuous & base\_link $\to$ ruota\_sx & (0, +88, 32,5), roll $-90^\circ$ & 0,30 N$\cdot$m / 29,3 rad/s \\
+  \texttt{giunto\_ruota\_dx} & continuous & base\_link $\to$ ruota\_dx & (0, $-$88, 32,5), roll $-90^\circ$ & 0,30 N$\cdot$m / 29,3 rad/s \\
+  \hline
+\end{tabular}}
+\end{center}
+La rotazione di $-90^\circ$ porta l'asse $z$ del giunto (asse di rotazione in URDF) lungo l'asse delle
+ruote. Effort e Velocity sono i valori \textbf{tipici, non misurati} del motore JGA25-370 a 6 V:
+coppia di stallo 0,30 N$\cdot$m e 280 giri/min a vuoto ($280 \cdot 2\pi/60 = 29{,}3$ rad/s).
+
+\subsection{Come si crea dall'editor}
+\begin{enumerate}[leftmargin=*]
+  \item Workbench \emph{CROSS - ROS workbench}.
+  \item \emph{New Robot} (\texttt{N},\texttt{R}): crea il contenitore \texttt{robot}.
+  \item \emph{New Link} (\texttt{N},\texttt{L}) con il robot selezionato; rinominare (F2) in
+    \texttt{base\_link}. Nel pannello \emph{Dati}, propriet\`a \textbf{Real} $\to$ ``\ldots'' e spuntare i
+    pezzi elencati sopra; \textbf{Visual} e \textbf{Collision} con gli stessi pezzi.
+  \item Stessa cosa per \texttt{ruota\_sx} e \texttt{ruota\_dx}.
+  \item \emph{New Joint} (\texttt{N},\texttt{J}): nel pannello Dati Type, Parent, Child, Origin,
+    Effort, Velocity come in tabella. Usare \emph{Set placement} per posizionare le mesh.
+  \item \emph{Set the material to the whole robot or a link}, poi \emph{Calculate mass and inertia}
+    con il robot selezionato: riempie Mass e Ixx\ldots Izz di ogni link.
+\end{enumerate}
+
+\subsection{Problemi incontrati}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Si vedono solo frecce}: sui link \texttt{ShowVisual} e \texttt{ShowReal} (pannello
+    \emph{Vista}) erano \texttt{False}. Messi a \texttt{True}, e nascosti i 40 pezzi CAD originali
+    per non vederli doppi.
+  \item \textbf{Ruote staccate}: i pezzi CAD sono in coordinate assolute, ma il link applicava di nuovo la
+    propria posizione ($\pm$88 mm, $-90^\circ$). Corretto impostando su \texttt{ruota\_sx/dx}
+    \texttt{MountedPlacement} = inverso del \texttt{Placement} del link (\`e ci\`o che fa
+    \emph{Set placement}).
+  \item \textbf{Colori} per riconoscere i link: grigio \texttt{base\_link}, rosso \texttt{ruota\_sx}, blu
+    \texttt{ruota\_dx}. Le frecce blu al centro delle ruote sono gli assi dei giunti
+    (\texttt{ShowAxis}, lunghezza 60 mm).
+  \item \textbf{Materiale non assegnato}: \texttt{MaterialDensity} \`e vuoto e
+    \texttt{MaterialNotCalculate = True}, quindi la densit\`a usata non \`e documentata. Le masse per\`o
+    tornano con il vecchio modello Fusion: totale $393 + 42 + 42 = 477$ g contro 476,5 g (stime: motori
+    70 g, celle 46 g, plastica stampata 0,6 g/cm$^3$; \textbf{da verificare pesando i pezzi veri}).
+  \item \textbf{Bridge MCP che non parte da solo}: all'avvio compare
+    ``\texttt{module 'FreeCAD' has no attribute 'GuiUp'}'' e l'auto-start fallisce; avviarlo dal
+    workbench \emph{Robust MCP Bridge} con \emph{Start MCP Bridge}.
+\end{itemize}
+
+\section{Prossimi passi (da fare)}
+\begin{enumerate}[leftmargin=*]
+  \item Quando ci sono i pezzi veri: pesarli, correggere le masse e ricalcolare massa e inerzia.
+  \item Esportare l'URDF da CROSS in \texttt{robot\_sim\textbackslash} (corpo attualmente vuota).
+  \item Scrivere da capo \texttt{robot\_cfg.py} (ArticulationCfg/UrdfFileCfg) e l'ambiente RL
+    (DirectRLEnv) usando i nomi di link/giunti del nuovo URDF.
+  \item Scrivere da capo gli script di training/visualizzazione/valutazione e confrontare i risultati con
+    quelli precedenti (8,33\textdegree{} di appoggio, reward RL) per verificare l'equivalenza del nuovo
+    modello.
+\end{enumerate}
+
+\end{document}

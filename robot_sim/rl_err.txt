@@ -1,8 +1,0 @@
-Warning: Possible version incompatibility. Attempting to load carb::ujitso::IFactory with version v0.3 against v0.2.
-[ISAACLAB] KitLauncher initialization complete
-G:\robotTest\env_isaac6\Lib\site-packages\rsl_rl\utils\utils.py:235: UserWarning: The observation configuration dictionary 'obs_groups' is empty and thus likely not configured. Consider configuring the 'obs_groups' dictionary explicitly
-  warnings.warn(
-G:\robotTest\env_isaac6\Lib\site-packages\rsl_rl\utils\utils.py:266: UserWarning: The observation configuration dictionary 'obs_groups' does not contain the 'actor' key. As an observation group with the name 'policy' was found, this is assumed to be the appropriate observation. Consider adding the 'actor' key to the 'obs_groups' dictionary for clarity. This behavior will be removed in a future version.
-  warnings.warn(
-G:\robotTest\env_isaac6\Lib\site-packages\rsl_rl\utils\utils.py:266: UserWarning: The observation configuration dictionary 'obs_groups' does not contain the 'critic' key. As an observation group with the name 'policy' was found, this is assumed to be the appropriate observation. Consider adding the 'critic' key to the 'obs_groups' dictionary for clarity. This behavior will be removed in a future version.
-  warnings.warn(

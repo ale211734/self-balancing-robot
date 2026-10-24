@@ -1,9 +1,0 @@
-AppLauncher is deprecated; use isaaclab.app.launch_simulation.
-Warning: Possible version incompatibility. Attempting to load carb::ujitso::IFactory with version v0.3 against v0.2.
-[ISAACLAB] KitLauncher initialization complete
-G:\robotTest\robot_sim\test_modello.py:52: DeprecationWarning: The `root_physx_view` property will be deprecated in a future release. Please use `root_view` instead.
-  print(f"massa totale nel simulatore: {float(robot.root_physx_view.get_masses().numpy().sum()):.4f} kg")
-G:\robotTest\robot_sim\test_modello.py:56: DeprecationWarning: Implicit use of ProxyArray as a torch.Tensor is deprecated. Use the explicit .torch property instead (e.g., array.torch).
-  robot.set_joint_velocity_target(torch.zeros_like(robot.data.joint_pos))
-G:\robotTest\robot_sim\test_modello.py:56: DeprecationWarning: Articulation.set_joint_velocity_target is deprecated. Use articulation.actuators.target_command.set_velocity_index instead.
-  robot.set_joint_velocity_target(torch.zeros_like(robot.data.joint_pos))
