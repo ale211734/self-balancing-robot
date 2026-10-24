@@ -1,0 +1,14 @@
+AppLauncher is deprecated; use isaaclab.app.launch_simulation.
+Warning: Possible version incompatibility. Attempting to load carb::ujitso::IFactory with version v0.3 against v0.2.
+Warning: Possible version incompatibility. Attempting to load omni::fabric::IStageReaderWriter with version v0.16 against v0.14.
+[ISAACLAB] KitLauncher initialization complete
+G:\robotTest\robot_sim\prova_lqr_isaac.py:93: DeprecationWarning: Reading the root state directly is deprecated since IsaacLab 3.0 and will be removed in a future version. Please use the default_root_pose and default_root_vel properties instead.
+  st = T(robot.data.default_root_state).clone()
+G:\robotTest\robot_sim\prova_lqr_isaac.py:100: DeprecationWarning: The function 'write_root_pose_to_sim' will be deprecated in a future release. Please use 'write_root_pose_to_sim_index' instead.
+  robot.write_root_pose_to_sim(st[:, :7])
+G:\robotTest\robot_sim\prova_lqr_isaac.py:101: DeprecationWarning: The function 'write_root_velocity_to_sim' will be deprecated in a future release. Please use 'write_root_velocity_to_sim_index' instead.
+  robot.write_root_velocity_to_sim(st[:, 7:])
+G:\robotTest\robot_sim\prova_lqr_isaac.py:102: DeprecationWarning: The function 'write_joint_state_to_sim' will be deprecated in a future release. Please use 'write_joint_position_to_sim_index' and 'write_joint_velocity_to_sim_index' instead.
+  robot.write_joint_state_to_sim(T(robot.data.default_joint_pos).clone(), T(robot.data.default_joint_vel).clone())
+G:\robotTest\robot_sim\prova_lqr_isaac.py:133: DeprecationWarning: Articulation.set_joint_effort_target is deprecated. Use articulation.actuators.target_command.set_effort_index instead.
+  robot.set_joint_effort_target(tau)

@@ -1,0 +1,8 @@
+/env_isaac/
+/env_isaac6/
+/IsaacLab/
+/IsaacLab6/
+/pipcache/
+/fusion360-mcp-server/
+__pycache__/
+*.pyc

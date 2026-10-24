@@ -1,0 +1,3 @@
+=== LAB FINITO exit 0
+=== TORCH FINITO exit 0
+torch 2.11.0+cu128 cuda True NVIDIA GeForce RTX 5060 Ti

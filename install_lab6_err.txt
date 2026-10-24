@@ -1,0 +1,39 @@
+Using Python 3.12.0 environment at: env_isaac6
+Resolved 7 packages in 61ms
+   Building isaaclab-rl @ file:///G:/robotTest/IsaacLab6/source/isaaclab_rl
+   Building isaaclab-tasks @ file:///G:/robotTest/IsaacLab6/source/isaaclab_tasks
+   Building isaaclab @ file:///G:/robotTest/IsaacLab6/source/isaaclab
+   Building isaaclab-physx @ file:///G:/robotTest/IsaacLab6/source/isaaclab_physx
+   Building isaaclab-contrib @ file:///G:/robotTest/IsaacLab6/source/isaaclab_contrib
+   Building isaaclab-assets @ file:///G:/robotTest/IsaacLab6/source/isaaclab_assets
+   Building isaaclab-newton @ file:///G:/robotTest/IsaacLab6/source/isaaclab_newton
+      Built isaaclab-rl @ file:///G:/robotTest/IsaacLab6/source/isaaclab_rl
+      Built isaaclab-physx @ file:///G:/robotTest/IsaacLab6/source/isaaclab_physx
+      Built isaaclab-contrib @ file:///G:/robotTest/IsaacLab6/source/isaaclab_contrib
+      Built isaaclab @ file:///G:/robotTest/IsaacLab6/source/isaaclab
+      Built isaaclab-assets @ file:///G:/robotTest/IsaacLab6/source/isaaclab_assets
+      Built isaaclab-newton @ file:///G:/robotTest/IsaacLab6/source/isaaclab_newton
+      Built isaaclab-tasks @ file:///G:/robotTest/IsaacLab6/source/isaaclab_tasks
+Prepared 7 packages in 4.26s
+Installed 7 packages in 80ms
+ + isaaclab==28.0.0 (from file:///G:/robotTest/IsaacLab6/source/isaaclab)
+ + isaaclab-assets==2.0.1 (from file:///G:/robotTest/IsaacLab6/source/isaaclab_assets)
+ + isaaclab-contrib==3.2.0 (from file:///G:/robotTest/IsaacLab6/source/isaaclab_contrib)
+ + isaaclab-newton==9.1.4 (from file:///G:/robotTest/IsaacLab6/source/isaaclab_newton)
+ + isaaclab-physx==8.0.0 (from file:///G:/robotTest/IsaacLab6/source/isaaclab_physx)
+ + isaaclab-rl==1.5.1 (from file:///G:/robotTest/IsaacLab6/source/isaaclab_rl)
+ + isaaclab-tasks==25.2.0 (from file:///G:/robotTest/IsaacLab6/source/isaaclab_tasks)
+warning: The package `isaaclab-rl @ file:///G:/robotTest/IsaacLab6/source/isaaclab_rl` does not have an extra named `rsl-rl`
+Using Python 3.12.0 environment at: env_isaac6
+Resolved 13 packages in 295ms
+Downloading torch (2.6GiB)
+Downloading torchvision (9.1MiB)
+ Downloaded torchvision
+ Downloaded torch
+Prepared 2 packages in 27.21s
+Uninstalled 2 packages in 1.14s
+Installed 2 packages in 1.70s
+ - torch==2.11.0
+ + torch==2.11.0+cu128
+ - torchvision==0.26.0
+ + torchvision==0.26.0+cu128
